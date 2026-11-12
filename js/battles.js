@@ -3,7 +3,7 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const SUPABASE_URL = 'https://jqaverqnhpbnrheirbqo.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_fYv07uf1N1HAPLXU1ByG1G_mHGOcU-f';
+  const SUPABASE_KEY = 'sb_publishable_fYv07uf1N1HAPLXU1ByG1g_mHGOcU-f';
   const API_URL = 'https://pokedexapi-api.onrender.com';
   const TEAM_KEY = 'pokedex-battle-team-v1';
   let sb = null, socket = null, currentUser = null, teamCache = [], catalog = [], currentRoom = null;
