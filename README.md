@@ -4,12 +4,12 @@ Pokédex responsiva desenvolvida com **HTML5, CSS3 e JavaScript puro**, consumin
 
 ## Funcionalidades
 
-- Catálogo das 1.025 espécies das nove gerações, com imagens oficiais e fallback para sprites.
+- Catálogo local com 1.025 espécies das nove gerações, tipos, atributos base, altura, peso, habilidades e classificação de lendários/míticos; imagens oficiais e fallback para sprites.
 - Carregamento progressivo em páginas de 24 Pokémon.
-- Pesquisa por nome e número, filtro por geração e tipo e ordenação.
+- Pesquisa por nome e número, filtro por geração e tipo e ordenação por número, nome, altura e peso, sem chamadas de API para essas operações.
 - Filtros rápidos para favoritos, capturados, lendários e míticos.
 - Ficha individual com tipos, descrição, atributos base, habilidades, dados da espécie, formas disponíveis e cadeia evolutiva.
-- Comparador de atributos de dois Pokémon.
+- Comparador de atributos de dois Pokémon usando dados locais.
 - Favoritos, coleção e tema claro/escuro persistidos em LocalStorage.
 - Progresso da coleção por geração e estatísticas gerais.
 - Layout adaptável a computadores, tablets e celulares.
