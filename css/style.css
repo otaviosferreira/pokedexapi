@@ -36,3 +36,15 @@ body.dark{--bg:#111a28;--surface:#1a2637;--surface-2:#243247;--text:#e8edf5;--mu
 .retro-menu button:hover{background:#dce7c9}
 .slot-ability-wrap{min-width:0;display:grid;gap:5px}.slot-types{display:flex;gap:4px;flex-wrap:wrap}.battle-type{display:inline-flex;align-items:center;gap:3px;border-radius:4px;padding:3px 5px;background:#e8edf2;color:#263247;font-size:9px;text-transform:capitalize;font-weight:800}.battle-type img{width:15px;height:15px;object-fit:contain}
 @media(max-width:560px){.retro-field{height:250px}.retro-opponent>img{width:88px;height:88px}.retro-player>img{width:110px;height:110px}.retro-status{width:145px;font-size:9px}.retro-dialog{grid-template-columns:1fr}.retro-menu{grid-template-columns:1fr 1fr}.retro-dialog p{min-height:35px}}
+
+/* Ajustes do construtor de equipes e ícones oficiais dos tipos */
+.battle-slot{grid-template-columns:25px minmax(150px,220px) minmax(190px,1fr);column-gap:8px}
+.battle-slot .slot-species-wrap{min-width:0;max-width:220px}
+.battle-slot .slot-species{width:100%;max-width:220px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.battle-slot .slot-ability-wrap{min-width:0;display:grid;gap:5px}
+.battle-slot .slot-ability{width:100%;min-width:0;max-width:100%}
+.battle-slot .slot-types{display:flex;align-items:center;gap:5px;flex-wrap:wrap;min-height:22px}
+.battle-slot .slot-types:before{content:"Tipo:";font-size:9px;color:var(--muted);font-weight:700}
+.battle-slot .battle-type{display:inline-flex;align-items:center;gap:4px;border-radius:5px;padding:3px 6px;background:var(--surface-2);color:var(--text);font-size:9px;font-weight:800;text-transform:capitalize}
+.battle-slot .battle-type img{display:block;width:38px;height:18px;object-fit:contain}
+@media(max-width:560px){.battle-slot{grid-template-columns:22px minmax(0,1fr)}.battle-slot .slot-species-wrap{max-width:none}.battle-slot .slot-species{max-width:100%}.battle-slot .slot-ability-wrap{grid-column:2}.battle-slot .slot-moves{grid-column:2}}
