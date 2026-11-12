@@ -327,15 +327,19 @@
     retry.innerHTML='<div class="loading-state"><div class="pokeball-loader"></div><p>Conectando à PokéAPI...</p></div>';
     $('#results-label').textContent='Carregando catálogo...';
     try {
-      catalog=await PokeAPI.catalog();
-      $('#hero-total').textContent=catalog.length.toLocaleString('pt-BR');
-      $('#results-label').textContent=catalog.length.toLocaleString('pt-BR')+' Pokémon disponíveis';
-      $('#pokemon-options').innerHTML=catalog.map(p=>'<option value="'+p.name+'">#'+pad(p.id)+'</option>').join('');
-      renderCatalog();
-      if(currentView==='favorites') renderSaved('favorites');
-      if(currentView==='collection') { renderCollection(); renderSaved('collection'); }
+      const updateCatalogUI = complete => {
+        catalog=complete;
+        $('#hero-total').textContent=catalog.length.toLocaleString('pt-BR');
+        $('#results-label').textContent=catalog.length.toLocaleString('pt-BR')+' Pokémon disponíveis';
+        $('#pokemon-options').innerHTML=catalog.map(p=>'<option value="'+p.name+'">#'+pad(p.id)+'</option>').join('');
+        if(currentView==='explore') renderCatalog();
+        if(currentView==='favorites') renderSaved('favorites');
+        if(currentView==='collection') { renderCollection(); renderSaved('collection'); }
+      };
+      catalog=await PokeAPI.catalog(updateCatalogUI);
+      updateCatalogUI(catalog);
       const status=$('.status-text');
-      if(status) status.textContent='PokéAPI conectada';
+      if(status) status.textContent=catalog.length>=1025?'PokéAPI conectada':'Catálogo parcial · completando';
       $('.status-dot')?.classList.remove('offline');
     } catch(error) {
       const status=$('.status-text');
