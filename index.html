@@ -11,6 +11,9 @@
   <link rel="stylesheet" href="css/style.css">
   <script src="js/api.js" defer></script>
   <script src="js/app.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js" defer></script>
+  <script src="https://pokedexapi-api.onrender.com/socket.io/socket.io.js" defer></script>
+  <script src="js/battles.js" defer></script>
 </head>
 <body>
   <div class="app-shell">
@@ -23,6 +26,7 @@
         <button class="nav-link" data-view="collection"><span>✓</span> Minha coleção</button>
         <button class="nav-link" data-view="compare"><span>⇄</span> Comparador</button>
         <button class="nav-link" data-view="statistics"><span>▥</span> Estatísticas</button>
+        <button class="nav-link" data-view="battles"><span>⚔</span> Batalhas</button>
       </nav>
       <div class="sidebar-bottom">
         <div class="mini-progress"><div class="mini-progress-top"><span>Sua Pokédex</span><strong id="side-progress">0%</strong></div><div class="progress-track"><i id="side-progress-bar"></i></div><small id="side-caught">0 de 1025 capturados</small></div>
@@ -61,6 +65,30 @@
       <section class="view" id="view-collection"><div class="page-heading"><span class="eyebrow">JORNADA DO TREINADOR</span><h1>Minha coleção</h1><p>Acompanhe sua evolução e complete as nove gerações.</p></div><div class="collection-overview"><div class="collection-number"><strong id="collection-number">0</strong><span>/ 1.025 capturados</span></div><div class="collection-progress"><div class="progress-track large"><i id="collection-bar"></i></div><p id="collection-percent">0% da Pokédex completa</p></div></div><div class="generation-progress" id="generation-progress"></div><div class="section-heading compact"><div><h2>Pokémon capturados</h2><p>Sua coleção registrada neste dispositivo.</p></div></div><div class="pokemon-grid" id="collection-grid"></div></section>
       <section class="view" id="view-compare"><div class="page-heading"><span class="eyebrow">ANÁLISE DE ATRIBUTOS</span><h1>Comparador Pokémon</h1><p>Escolha dois Pokémon e descubra como seus atributos se comparam.</p></div><div class="compare-selectors"><label>Primeiro Pokémon<input id="compare-one" list="pokemon-options" placeholder="Ex.: pikachu ou 25"></label><label>Segundo Pokémon<input id="compare-two" list="pokemon-options" placeholder="Ex.: charizard ou 6"></label><datalist id="pokemon-options"></datalist><button class="primary-button" id="compare-button">Comparar Pokémon</button></div><div id="compare-result" class="compare-result empty-state">Selecione dois Pokémon para iniciar a comparação.</div></section>
       <section class="view" id="view-statistics"><div class="page-heading"><span class="eyebrow">DADOS DA POKÉDEX</span><h1>Estatísticas gerais</h1><p>Uma visão geral das espécies e do seu progresso.</p></div><div class="stat-cards"><article><span>Espécies catalogadas</span><strong>1.025</strong><small>Da primeira à nona geração</small></article><article><span>Seus favoritos</span><strong id="stat-favorites">0</strong><small>Pokémon salvos</small></article><article><span>Capturados</span><strong id="stat-caught">0</strong><small id="stat-remaining">1.025 restantes</small></article><article><span>Progresso</span><strong id="stat-percent">0%</strong><small>Da coleção completa</small></article></div><div class="stats-layout"><article class="panel"><h3>Pokémon por geração</h3><div id="generation-chart" class="bar-chart"></div></article><article class="panel"><h3>Distribuição por tipo</h3><div id="type-chart" class="type-chart"></div></article></div></section>
+
+      <section class="view" id="view-battles">
+        <div class="page-heading"><span class="eyebrow">POKÉMON SHOWDOWN ENGINE</span><h1>Centro de Batalhas</h1><p>Monte uma equipe de seis Pokémon e desafie outro treinador em batalhas por turnos.</p></div>
+        <div class="battle-auth panel">
+          <div><h2>Conta de treinador</h2><p id="battle-auth-status">Entre ou crie uma conta para salvar equipes e participar de partidas online.</p></div>
+          <div class="battle-auth-fields"><input id="battle-email" type="email" placeholder="E-mail"><input id="battle-password" type="password" placeholder="Senha (mín. 6 caracteres)"><input id="battle-username" type="text" placeholder="Nome de treinador (cadastro)"><button class="primary-button" id="battle-signin">Entrar</button><button class="outline-button" id="battle-signup">Criar conta</button><button class="outline-button" id="battle-signout" hidden>Sair</button></div>
+        </div>
+        <div class="battle-layout">
+          <section class="panel team-builder">
+            <div class="section-heading compact"><div><span class="eyebrow">TEAM BUILDER</span><h2>Sua equipe 6x6</h2><p>Escolha seis espécies, habilidades e até quatro golpes por Pokémon.</p></div><button class="outline-button" id="battle-save-team">Salvar equipe</button></div>
+            <label class="team-name-label">Nome da equipe<input id="battle-team-name" maxlength="40" value="Minha equipe"></label>
+            <div id="battle-team-slots" class="battle-team-slots"></div>
+            <div class="battle-actions"><button class="primary-button" id="battle-create-local">Criar batalha local</button><button class="primary-button" id="battle-create-online">Criar sala online</button></div>
+            <div class="battle-join"><input id="battle-room-code" maxlength="6" placeholder="Código da sala"><button class="outline-button" id="battle-join-room">Entrar em uma sala</button></div>
+          </section>
+          <section class="panel battle-console">
+            <div class="section-heading compact"><div><span class="eyebrow">ARENA</span><h2>Partida</h2><p id="battle-status">Nenhuma partida ativa.</p></div><span class="battle-indicator" id="battle-indicator">OFFLINE</span></div>
+            <div class="battle-room-code" id="battle-room-display" hidden></div>
+            <div class="battle-log" id="battle-log"><p>Crie uma sala local ou online para começar. Para uma batalha local no mesmo computador, abra outra aba e entre com o código da sala.</p></div>
+            <div class="battle-turn-controls" id="battle-turn-controls" hidden><div class="battle-moves" id="battle-move-buttons"></div><div class="battle-switches" id="battle-switch-buttons"></div></div>
+          </section>
+        </div>
+        <p class="battle-disclaimer">Formato inicial: Gen 9 Custom Game · Singles · 6x6. As regras e cálculos de batalha são executados pelo simulador Pokémon Showdown no Render.</p>
+      </section>
       <footer class="footer">Feito para treinadores Pokémon · Dados da <a href="https://pokeapi.co/" target="_blank" rel="noreferrer">PokéAPI</a></footer>
     </main>
   </div>
