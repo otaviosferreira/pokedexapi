@@ -250,7 +250,7 @@
   async function renderStatistics() {
     const ranges=[[1,151],[152,251],[252,386],[387,493],[494,649],[650,721],[722,809],[810,905],[906,1025]];
     $('#generation-chart').innerHTML=ranges.map((range,index)=>'<div class="bar-row"><span>'+GEN_NAMES[index]+'</span><div class="progress-track"><i style="display:block;width:'+((range[1]-range[0]+1)/151*100)+'%;height:100%;background:#ef7770;border-radius:20px"></i></div><b>'+(range[1]-range[0]+1)+'</b></div>').join('');
-    $('#type-chart').innerHTML=TYPE_NAMES.map(type=>typePill(type)).join('');
+    const typeCounts=await Promise.all(TYPE_NAMES.map(async type=>{try{const data=await PokeAPI.type(type);return {type,count:data.pokemon.filter(item=>{const id=Number(item.pokemon.url.match(/\\/pokemon\\/(\\d+)\\//)?.[1]);return id&&id<=TOTAL;}).length};}catch{return {type,count:0};}}));$('#type-chart').innerHTML=typeCounts.map(item=>'<div class="type-stat">'+typePill(item.type)+' <strong>'+item.count+'</strong></div>').join('');
     updateProgress();
   }
   function setupEvents() {
