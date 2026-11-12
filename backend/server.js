@@ -112,7 +112,7 @@ function normalizeTeam(input) {
     return {
       species: String(p.species).toLowerCase(),
       name: String(p.nickname || p.species).slice(0, 24),
-      ability: String(p.ability || 'noability').toLowerCase().replaceAll(' ', ''),
+      ability: p.ability ? String(p.ability).toLowerCase().replaceAll(' ', '') : '',
       item: p.item ? String(p.item).toLowerCase().replaceAll(' ', '') : '',
       moves: moves.map(m => String(m).toLowerCase().replaceAll(' ', '')),
       level: Math.min(100, Math.max(1, Number(p.level) || 100)),
