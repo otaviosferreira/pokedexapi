@@ -56,8 +56,13 @@
     try {
       const data=await PokeAPI.pokemon(id);
       const abilities=(data.abilities||[]).map(a=>({name:a.ability.name,hidden:a.is_hidden}));
-      const typeNames=(data.types||[]).sort((a,b)=>a.slot-b.slot).map(t=>t.type.name);
-      row.querySelector('.slot-types').innerHTML=typeNames.map(type=>'<span class="battle-type type-'+esc(type)+'"><img src="https://raw.githubusercontent.com/duiker101/pokemon-type-svg-icons/master/icons/'+esc(type)+'.svg" alt="">'+esc(type)+'</span>').join('');
+      const typeEntries=(data.types||[]).sort((a,b)=>a.slot-b.slot);
+      row.querySelector('.slot-types').innerHTML=typeEntries.map(entry=>{
+        const type=entry.type.name;
+        const typeId=Number(entry.type.url.match(/\\/type\\/(\\d+)\\//)?.[1]||0);
+        const icon=typeId?'<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/types/generation-ix/scarlet-violet/'+typeId+'.png" alt="'+esc(type)+'" onerror="this.style.display=\\'none\\'">':'';
+        return '<span class="battle-type type-'+esc(type)+'">'+icon+esc(type)+'</span>';
+      }).join('');
 
       const abilitySelect=row.querySelector('.slot-ability');
       abilitySelect.innerHTML='<option value="">Selecione uma habilidade</option>'+abilities.map(a=>'<option value="'+esc(a.name)+'">'+esc(a.name.replaceAll('-',' '))+(a.hidden?' (oculta)':'')+'</option>').join('');
