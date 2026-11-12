@@ -14,6 +14,26 @@ Pokédex responsiva desenvolvida com **HTML5, CSS3 e JavaScript puro**, consumin
 - Progresso da coleção por geração e estatísticas gerais.
 - Layout adaptável a computadores, tablets e celulares.
 
+## Arquitetura de hospedagem
+
+O projeto usa duas plataformas com responsabilidades separadas:
+
+- **Vercel:** publica o frontend estático (HTML, CSS, JavaScript) e o catálogo local.
+- **Render:** executa a API intermediária em `backend/`, que consulta a PokéAPI e mantém cache em memória para fichas, espécies e cadeias evolutivas.
+
+### Endpoints do Render
+
+- `GET /health` — estado do serviço e quantidade de itens em cache.
+- `GET /api/v2/pokemon/:id-ou-nome` — detalhes de um Pokémon ou forma.
+- `GET /api/v2/pokemon-species/:id-ou-nome` — descrição e dados da espécie.
+- `GET /api/v2/evolution-chain/:id` — cadeia evolutiva.
+
+O catálogo, a busca, os filtros, as estatísticas, a coleção e o comparador usam `data/pokemon.json`, então continuam funcionando sem esperar pela PokéAPI. Para os detalhes complementares, o frontend tenta o Render e usa a PokéAPI diretamente como alternativa quando o serviço intermediário está iniciando ou indisponível.
+
+O serviço Render está conectado à branch `main` com deploy automático. O frontend permanece publicado pela Vercel.
+
+**Observação sobre o plano gratuito do Render:** serviços web gratuitos entram em suspensão depois de 15 minutos sem tráfego e podem levar cerca de um minuto para voltar. Isso afeta a primeira consulta complementar após inatividade, mas não bloqueia o catálogo local. Consulte [as limitações oficiais do Render](https://render.com/docs/free).
+
 ## Estrutura
 
 ```text
