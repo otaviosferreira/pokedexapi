@@ -90,6 +90,7 @@
       const id=Number(button.dataset.id),set=button.dataset.action==='favorite'?favorites:caught;
       set.has(id)?set.delete(id):set.add(id);
       save();
+      if(currentView==='explore'&&((button.dataset.action==='favorite'&&quickFilter==='favorites')||(button.dataset.action==='caught'&&quickFilter==='caught'))){renderCatalog();return;}
       button.classList.toggle('active',set.has(id));
       button.textContent=button.dataset.action==='favorite'?(set.has(id)?'♥':'♡'):(set.has(id)?'✓':'＋');
       if(currentView==='favorites'&&!favorites.has(id))renderSaved('favorites');
@@ -359,11 +360,11 @@
       catalog=await PokeAPI.catalog(updateCatalogUI);
       updateCatalogUI(catalog);
       const status=$('.status-text');
-      if(status) status.textContent=catalog.length>=1025?'PokéAPI conectada':'Catálogo parcial · completando';
+      if(status) status.textContent=catalog.length===1025?'Catálogo local pronto':'Catálogo parcial';
       $('.status-dot')?.classList.remove('offline');
     } catch(error) {
       const status=$('.status-text');
-      if(status) status.textContent='PokéAPI indisponível';
+      if(status) status.textContent='Catálogo indisponível';
       $('.status-dot')?.classList.add('offline');
       retry.innerHTML='<div class="empty-state"><strong>Não foi possível carregar a Pokédex.</strong><br><br>'+error.message+'<br><br><button class="primary-button" id="retry-catalog">Tentar novamente</button></div>';
       $('#results-label').textContent='Falha ao carregar o catálogo';
