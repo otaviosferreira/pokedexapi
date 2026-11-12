@@ -9,7 +9,7 @@ const PokeAPI = (() => {
 
     const task = (async () => {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000);
+      const timeout = setTimeout(() => controller.abort(), 9000);
       try {
         const response = await fetch(url, {
           signal: controller.signal,
@@ -23,7 +23,7 @@ const PokeAPI = (() => {
         return data;
       } catch (error) {
         if (error.name === 'AbortError') {
-          throw new Error('A PokéAPI demorou mais de 15 segundos para responder. Tente novamente.');
+          throw new Error('A PokéAPI demorou mais de 9 segundos para responder. Tente novamente.');
         }
         if (error instanceof TypeError) {
           throw new Error('Falha de conexão com a PokéAPI. Verifique sua internet e tente novamente.');
@@ -64,9 +64,54 @@ const PokeAPI = (() => {
       artwork(id), homeArtwork(id), sprite(id)
     ].filter(Boolean);
   }
-  async function catalog() {
-    const data = await request(BASE + '/pokemon?limit=1025&offset=0');
-    return data.results.map((item, index) => ({id:index+1,name:item.name,url:item.url}));
+  const CATALOG_KEY = 'pokedex_catalog_v2';
+  const CATALOG_TOTAL = 1025;
+  function normalizeCatalog(results) {
+    return results.map(item => {
+      const id = Number(String(item.url).split('/').filter(Boolean).pop());
+      return {id, name:item.name, url:item.url};
+    }).filter(item => Number.isInteger(item.id) && item.id >= 1 && item.id <= CATALOG_TOTAL)
+      .sort((a,b)=>a.id-b.id);
+  }
+  function readCatalogCache() {
+    try {
+      const value = JSON.parse(localStorage.getItem(CATALOG_KEY) || 'null');
+      if (Array.isArray(value) && value.length) return value;
+    } catch {}
+    return null;
+  }
+  function writeCatalogCache(value) {
+    try { localStorage.setItem(CATALOG_KEY, JSON.stringify(value)); } catch {}
+  }
+  async function catalog(onUpdate) {
+    const cached = readCatalogCache();
+    if (cached && cached.length >= CATALOG_TOTAL) return cached;
+
+    if (cached && cached.length) {
+      // Mostra imediatamente o catálogo salvo e completa os dados em segundo plano.
+      refreshCatalog(cached, onUpdate).catch(()=>{});
+      return cached;
+    }
+
+    // Primeira abertura: mostra a primeira geração assim que a API responder.
+    const first = await request(BASE + '/pokemon?limit=151&offset=0');
+    const initial = normalizeCatalog(first.results);
+    writeCatalogCache(initial);
+    refreshCatalog(initial, onUpdate).catch(()=>{});
+    return initial;
+  }
+  async function refreshCatalog(current, onUpdate) {
+    const byId = new Map(current.map(item=>[item.id,item]));
+    const offsets = [151,401,651,901];
+    const pages = await Promise.all(offsets.map(offset=>{
+      const limit = Math.min(250, CATALOG_TOTAL-offset);
+      return request(BASE + '/pokemon?limit='+limit+'&offset='+offset);
+    }));
+    pages.forEach(page=>normalizeCatalog(page.results).forEach(item=>byId.set(item.id,item)));
+    const complete = [...byId.values()].sort((a,b)=>a.id-b.id);
+    writeCatalogCache(complete);
+    if (typeof onUpdate === 'function') onUpdate(complete);
+    return complete;
   }
   async function pokemon(idOrName) {
     return request(BASE + '/pokemon/' + encodeURIComponent(String(idOrName).toLowerCase()));
