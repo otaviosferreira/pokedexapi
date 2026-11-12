@@ -135,7 +135,10 @@
       const types=data.results.filter(t=>TYPE_NAMES.includes(t.name));
       select.innerHTML='<option value="all">Todos os tipos</option>'+types.map(t=>'<option value="'+t.name+'">'+(TYPE_LABELS[t.name]||titleCase(t.name))+'</option>').join('');
       $('#type-legend').innerHTML=TYPE_NAMES.map(type=>typePill(type)).join('');
-    } catch {}
+    } catch {
+      select.innerHTML='<option value="all">Todos os tipos</option>'+TYPE_NAMES.map(type=>'<option value="'+type+'">'+(TYPE_LABELS[type]||titleCase(type))+'</option>').join('');
+      $('#type-legend').innerHTML=TYPE_NAMES.map(type=>typePill(type)).join('');
+    }
   }
   async function applyTypeFilter(type) {
     if(type==='all'||typeMembers.has(type))return;
@@ -276,20 +279,31 @@
     $('#pokemon-modal').addEventListener('click',event=>{if(event.target.id==='pokemon-modal')closeModal();});
     document.addEventListener('keydown',event=>{if(event.key==='Escape')closeModal();if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k'){event.preventDefault();$('#search-input').focus();}});
     $('#compare-button').addEventListener('click',comparePokemon);
+    $('#pokemon-grid').addEventListener('click',event=>{
+      if(event.target.id==='retry-catalog') initCatalog();
+    });
   }
-  async function init() {
-    setupEvents();updateProgress();await loadTypeFilter();
-    try{
+  async function initCatalog() {
+    const retry=$('#pokemon-grid');
+    retry.innerHTML='<div class="loading-state"><div class="pokeball-loader"></div><p>Conectando à PokéAPI...</p></div>';
+    $('#results-label').textContent='Carregando catálogo...';
+    try {
       catalog=await PokeAPI.catalog();
       $('#hero-total').textContent=catalog.length.toLocaleString('pt-BR');
       $('#results-label').textContent=catalog.length.toLocaleString('pt-BR')+' Pokémon disponíveis';
-      $('#datalist-placeholder');
       $('#pokemon-options').innerHTML=catalog.map(p=>'<option value="'+p.name+'">#'+pad(p.id)+'</option>').join('');
       renderCatalog();
-    }catch(error){
-      $grid.innerHTML='<div class="empty-state">Não foi possível conectar à PokéAPI. Verifique sua internet e atualize a página.<br><br>'+error.message+'</div>';
+    } catch(error) {
+      retry.innerHTML='<div class="empty-state"><strong>Não foi possível carregar a Pokédex.</strong><br><br>'+error.message+'<br><br><button class="primary-button" id="retry-catalog">Tentar novamente</button></div>';
       $('#results-label').textContent='Falha ao carregar o catálogo';
     }
+  }
+  async function init() {
+    setupEvents();
+    updateProgress();
+    // O catálogo não depende do carregamento dos filtros de tipo.
+    loadTypeFilter();
+    initCatalog();
   }
   init();
 })();
