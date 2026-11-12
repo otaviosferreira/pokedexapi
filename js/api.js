@@ -1,6 +1,7 @@
 /* Camada de acesso à PokéAPI: cache em memória, controle de concorrência e fallback de imagens. */
 const PokeAPI = (() => {
-  const BASE = 'https://pokeapi.co/api/v2';
+  const BASE = 'https://pokedexapi-api.onrender.com/api/v2';
+  const DIRECT_BASE = 'https://pokeapi.co/api/v2';
   const cache = new Map();
   const pending = new Map();
   async function request(url) {
@@ -8,29 +9,50 @@ const PokeAPI = (() => {
     if (pending.has(url)) return pending.get(url);
 
     const task = (async () => {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 12000);
-      try {
-        const response = await fetch(url, {
-          signal: controller.signal,
-          headers: { Accept: 'application/json' }
-        });
-        if (!response.ok) {
-          throw new Error('PokéAPI respondeu com o status ' + response.status + '.');
+      const fetchJson = async (targetUrl, timeoutMs) => {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          const response = await fetch(targetUrl, {
+            signal: controller.signal,
+            headers: { Accept: 'application/json' }
+          });
+          if (!response.ok) {
+            const error = new Error('A API respondeu com HTTP ' + response.status + '.');
+            error.status = response.status;
+            throw error;
+          }
+          return await response.json();
+        } finally {
+          clearTimeout(timeout);
         }
-        const data = await response.json();
+      };
+
+      try {
+        let data;
+        try {
+          // O Render é a rota principal e mantém cache entre visitantes.
+          data = await fetchJson(url, 6000);
+        } catch (proxyError) {
+          // Se o Render estiver acordando ou indisponível, consulta a PokéAPI diretamente.
+          // Assim a interface continua funcionando mesmo durante o cold start do plano gratuito.
+          if (!url.startsWith(BASE + '/')) throw proxyError;
+          const directUrl = DIRECT_BASE + url.slice(BASE.length);
+          try {
+            data = await fetchJson(directUrl, 10000);
+          } catch (directError) {
+            if (proxyError.name === 'AbortError') {
+              throw new Error('O Render ainda está iniciando e a PokéAPI também não respondeu. Tente novamente em instantes.');
+            }
+            if (directError.name === 'AbortError') {
+              throw new Error('A PokéAPI demorou mais de 10 segundos para responder. Tente novamente.');
+            }
+            throw new Error('Não foi possível conectar ao Render nem à PokéAPI. Verifique sua internet e tente novamente.');
+          }
+        }
         cache.set(url, data);
         return data;
-      } catch (error) {
-        if (error.name === 'AbortError') {
-          throw new Error('A PokéAPI demorou mais de 12 segundos para responder. Tente novamente.');
-        }
-        if (error instanceof TypeError) {
-          throw new Error('Falha de conexão com a PokéAPI. Verifique sua internet e tente novamente.');
-        }
-        throw error;
       } finally {
-        clearTimeout(timeout);
         pending.delete(url);
       }
     })();
@@ -94,8 +116,10 @@ const PokeAPI = (() => {
     return request(BASE + '/pokemon-species/' + encodeURIComponent(String(idOrName).toLowerCase()));
   }
   async function evolution(urlOrId) {
-    const url = String(urlOrId).startsWith('http') ? urlOrId : BASE + '/evolution-chain/' + urlOrId + '/';
-    return request(url);
+    const value = String(urlOrId);
+    const match = value.match(/\/evolution-chain\/(\d+)\/?$/);
+    const id = match ? match[1] : value;
+    return request(BASE + '/evolution-chain/' + encodeURIComponent(id) + '/');
   }
   async function type(name) { return request(BASE + '/type/' + name); }
   async function typeList() { return request(BASE + '/type?limit=30'); }
