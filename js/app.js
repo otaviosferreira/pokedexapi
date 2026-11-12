@@ -296,7 +296,7 @@
       const maxStats=a.stats.map((stat,index)=>Math.max(stat.value,b.stats[index].value));
       const make=p=>'<article class="compare-pokemon"><img src="'+PokeAPI.artwork(p.id)+'" alt="'+p.name+'"><small>#'+pad(p.id)+'</small><h3>'+p.name.replaceAll('-',' ')+'</h3>'+
         '<div class="card-types">'+p.types.map(typePill).join('')+'</div><p class="muted">'+p.height+' m · '+p.weight+' kg</p>'+
-        p.stats.map((stat,index)=>'<div class="compare-stat"><span>'+stat.name.replace('special-','Sp. ')+'</span><div class="progress-track"><i style="display:block;width:'+(stat.value/255*100)+'%;height:100%;background:'+(stat.value===maxStats[index]?'#42bd83':'#ef7770');border-radius:20px"></i></div><b>'+stat.value+'</b></div>').join('')+
+        p.stats.map((stat,index)=>'<div class="compare-stat"><span>'+stat.name.replace('special-','Sp. ')+'</span><div class="progress-track"><i style="display:block;width:'+(stat.value/255*100)+'%;height:100%;background:'+(stat.value===maxStats[index]?'#42bd83':'#ef7770')+';border-radius:20px"></i></div><b>'+stat.value+'</b></div>').join('')+
         '<strong>Total: '+p.stats.reduce((sum,stat)=>sum+stat.value,0)+'</strong></article>';
       result.innerHTML='<div class="compare-columns">'+make(a)+make(b)+'</div>';
     } catch(error) {result.innerHTML='<div class="empty-state">'+error.message+'</div>';}
