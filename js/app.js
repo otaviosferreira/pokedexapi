@@ -263,7 +263,7 @@
     if(localStorage.getItem(STORAGE.theme)==='dark'){document.body.classList.add('dark');$('#theme-icon').textContent='☀';}
     $('#search-input').addEventListener('input',()=>renderCatalog());
     $('#generation-filter').addEventListener('change',()=>renderCatalog());
-    $('#sort-filter').addEventListener('change',()=>renderCatalog());
+    $('#sort-filter').addEventListener('change',async()=>{const sort=$('#sort-filter').value;if(sort==='height'||sort==='weight'){toast('Carregando medidas para ordenar...');await PokeAPI.mapLimit(catalog,10,async entry=>{if(!detailCache.has(entry.id)){const data=await PokeAPI.pokemon(entry.id);detailCache.set(entry.id,data);}return true;});}renderCatalog();});
     $('#type-filter').addEventListener('change',async event=>{await applyTypeFilter(event.target.value);renderCatalog();});
     $('#reset-filters').addEventListener('click',()=>{$('#search-input').value='';$('#generation-filter').value='all';$('#type-filter').value='all';$('#sort-filter').value='id-asc';quickFilter='all';$$('[data-quick]').forEach(c=>c.classList.toggle('active',c.dataset.quick==='all'));renderCatalog();});
     $$('[data-quick]').forEach(chip=>chip.addEventListener('click',async()=>{
