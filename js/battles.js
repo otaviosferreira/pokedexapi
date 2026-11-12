@@ -60,7 +60,7 @@
       row.querySelector('.slot-types').innerHTML=typeEntries.map(entry=>{
         const type=entry.type.name;
         const typeId=Number(entry.type.url.match(/type\/(\d+)/)?.[1]||0);
-        const icon=typeId?'<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/types/generation-ix/scarlet-violet/'+typeId+'.png" alt="'+esc(type)+'" onerror="this.style.display=\\'none\\'">':'';
+        const icon=typeId?'<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/types/generation-ix/scarlet-violet/'+typeId+'.png" alt="'+esc(type)+'" onerror="this.remove()">':'';
         return '<span class="battle-type type-'+esc(type)+'">'+icon+esc(type)+'</span>';
       }).join('');
 
