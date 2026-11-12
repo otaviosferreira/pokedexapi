@@ -6,12 +6,35 @@ const PokeAPI = (() => {
   async function request(url) {
     if (cache.has(url)) return cache.get(url);
     if (pending.has(url)) return pending.get(url);
-    const task = fetch(url).then(async response => {
-      if (!response.ok) throw new Error('Não foi possível carregar os dados da PokéAPI (' + response.status + ').');
-      const data = await response.json();
-      cache.set(url, data);
-      return data;
-    }).finally(() => pending.delete(url));
+
+    const task = (async () => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      try {
+        const response = await fetch(url, {
+          signal: controller.signal,
+          headers: { Accept: 'application/json' }
+        });
+        if (!response.ok) {
+          throw new Error('PokéAPI respondeu com o status ' + response.status + '.');
+        }
+        const data = await response.json();
+        cache.set(url, data);
+        return data;
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          throw new Error('A PokéAPI demorou mais de 15 segundos para responder. Tente novamente.');
+        }
+        if (error instanceof TypeError) {
+          throw new Error('Falha de conexão com a PokéAPI. Verifique sua internet e tente novamente.');
+        }
+        throw error;
+      } finally {
+        clearTimeout(timeout);
+        pending.delete(url);
+      }
+    })();
+
     pending.set(url, task);
     return task;
   }
