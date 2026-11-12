@@ -1,0 +1,14 @@
+{
+  "name": "pokedexapi-render",
+  "version": "1.0.0",
+  "private": true,
+  "description": "API intermediaria com cache para a PokéAPI",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
