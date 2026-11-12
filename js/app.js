@@ -373,7 +373,8 @@
   async function init() {
     setupEvents();
     updateProgress();
-    // O catálogo não depende do carregamento dos filtros de tipo.
+    // Acorda o serviço Render em segundo plano; o catálogo local não espera por ele.
+    PokeAPI.warmup();
     loadTypeFilter();
     initCatalog();
   }
