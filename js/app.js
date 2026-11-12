@@ -8,7 +8,22 @@
   const TYPE_NAMES = ['normal','fire','water','electric','grass','ice','fighting','poison','ground','flying','psychic','bug','rock','ghost','dragon','dark','steel','fairy'];
   const TYPE_LABELS = {normal:'Normal',fire:'Fogo',water:'Água',electric:'Elétrico',grass:'Planta',ice:'Gelo',fighting:'Lutador',poison:'Veneno',ground:'Terra',flying:'Voador',psychic:'Psíquico',bug:'Inseto',rock:'Pedra',ghost:'Fantasma',dragon:'Dragão',dark:'Sombrio',steel:'Aço',fairy:'Fada'};
   const STORAGE = {favorites:'pokedex-favorites-v1',caught:'pokedex-caught-v1',theme:'pokedex-theme-v1'};
-  const readSet = key => new Set(JSON.parse(localStorage.getItem(key) || '[]'));
+  function readSet(key) {
+    try {
+      const value = JSON.parse(localStorage.getItem(key) || '[]');
+      if (!Array.isArray(value)) return new Set();
+      return new Set(value.map(Number).filter(id => Number.isInteger(id) && id >= 1 && id <= TOTAL));
+    } catch {
+      return new Set();
+    }
+  }
+  function readStorage(key) {
+    try { return localStorage.getItem(key); } catch { return null; }
+  }
+  function writeStorage(key, value) {
+    try { localStorage.setItem(key, value); return true; }
+    catch { toast('O navegador bloqueou o armazenamento local.'); return false; }
+  }
   let favorites = readSet(STORAGE.favorites), caught = readSet(STORAGE.caught);
   let catalog = [], visibleCount = 24, currentView = 'explore', quickFilter = 'all', activeModalId = null;
   const detailCache = new Map(), speciesCache = new Map(), typeMembers = new Map(), speciesFlags = new Map();
@@ -17,8 +32,8 @@
   const pad = id => String(id).padStart(3,'0');
   const titleCase = value => value ? value.charAt(0).toUpperCase()+value.slice(1) : '';
   const save = () => {
-    localStorage.setItem(STORAGE.favorites,JSON.stringify([...favorites]));
-    localStorage.setItem(STORAGE.caught,JSON.stringify([...caught]));
+    writeStorage(STORAGE.favorites,JSON.stringify([...favorites]));
+    writeStorage(STORAGE.caught,JSON.stringify([...caught]));
     updateProgress();
   };
   function toast(message) {
@@ -83,10 +98,20 @@
       if(img.dataset.tried!=='1'){img.dataset.tried='1';img.src=img.dataset.fallback;}
       else {img.style.opacity='.2';}
     },{once:true}));
-    const observer=new IntersectionObserver(entries=>{
-      entries.forEach(item=>{if(item.isIntersecting){const id=Number(item.target.dataset.types);loadCardTypes(id,item.target);observer.unobserve(item.target);}});
-    },{rootMargin:'180px'});
-    container.querySelectorAll('[data-types]').forEach(node=>observer.observe(node));
+    if ('IntersectionObserver' in window) {
+      const observer=new IntersectionObserver(entries=>{
+        entries.forEach(item=>{
+          if(item.isIntersecting){
+            const id=Number(item.target.dataset.types);
+            loadCardTypes(id,item.target);
+            observer.unobserve(item.target);
+          }
+        });
+      },{rootMargin:'180px'});
+      container.querySelectorAll('[data-types]').forEach(node=>observer.observe(node));
+    } else {
+      container.querySelectorAll('[data-types]').forEach(node=>loadCardTypes(Number(node.dataset.types),node));
+    }
   }
   async function loadCardTypes(id,node) {
     try {
@@ -144,17 +169,31 @@
     if(type==='all'||typeMembers.has(type))return;
     try {
       const data=await PokeAPI.type(type);
-      typeMembers.set(type,new Set(data.pokemon.map(item=>Number(item.pokemon.url.match(/\/pokemon\/(\d+)\//)?.[1])).filter(id=>id&&id<=TOTAL)));
+      typeMembers.set(type,new Set(data.pokemon.map(item=>Number(item.pokemon.url.split('/').filter(Boolean).pop())).filter(id=>Number.isInteger(id)&&id>=1&&id<=TOTAL)));
     } catch {toast('Não foi possível carregar esse filtro de tipo.');}
   }
+  let loadingSpeciesFlags = null;
   async function loadSpeciesFlags() {
-    toast('Carregando classificação de lendários e míticos...');
-    const results=await PokeAPI.mapLimit(catalog,12,async entry=>{
-      const data=await PokeAPI.species(entry.id);
-      const flag=data.is_legendary?'legendary':data.is_mythical?'mythical':'normal';
-      speciesFlags.set(entry.id,flag);return flag;
-    });
-    toast('Classificação carregada.');return results;
+    if (loadingSpeciesFlags) return loadingSpeciesFlags;
+    const missing = catalog.filter(entry => !speciesFlags.has(entry.id));
+    if (!missing.length) return;
+    loadingSpeciesFlags = (async () => {
+      toast('Carregando classificação de lendários e míticos. Isso pode levar alguns instantes...');
+      let completed = 0;
+      for (let start=0; start<missing.length; start+=80) {
+        const batch=missing.slice(start,start+80);
+        await PokeAPI.mapLimit(batch,8,async entry=>{
+          const data=await getSpecies(entry.id);
+          speciesFlags.set(entry.id,data.is_legendary?'legendary':data.is_mythical?'mythical':'normal');
+          completed++;
+          return true;
+        });
+        toast('Classificando espécies: '+completed+' de '+missing.length);
+      }
+      toast('Classificação concluída.');
+    })();
+    try { await loadingSpeciesFlags; }
+    finally { loadingSpeciesFlags = null; }
   }
   async function renderSaved(which) {
     const ids=[...(which==='favorites'?favorites:caught)].sort((a,b)=>a-b);
@@ -261,9 +300,9 @@
     $('#mobile-menu').addEventListener('click',()=>$('#sidebar').classList.toggle('open'));
     $('#theme-toggle').addEventListener('click',()=>{
       document.body.classList.toggle('dark');const dark=document.body.classList.contains('dark');
-      localStorage.setItem(STORAGE.theme,dark?'dark':'light');$('#theme-icon').textContent=dark?'☀':'☾';
+      writeStorage(STORAGE.theme,dark?'dark':'light');$('#theme-icon').textContent=dark?'☀':'☾';
     });
-    if(localStorage.getItem(STORAGE.theme)==='dark'){document.body.classList.add('dark');$('#theme-icon').textContent='☀';}
+    if(readStorage(STORAGE.theme)==='dark'){document.body.classList.add('dark');$('#theme-icon').textContent='☀';}
     $('#search-input').addEventListener('input',()=>renderCatalog());
     $('#generation-filter').addEventListener('change',()=>renderCatalog());
     $('#sort-filter').addEventListener('change',async()=>{const sort=$('#sort-filter').value;if(sort==='height'||sort==='weight'){toast('Carregando medidas para ordenar...');await PokeAPI.mapLimit(catalog,10,async entry=>{if(!detailCache.has(entry.id)){const data=await PokeAPI.pokemon(entry.id);detailCache.set(entry.id,data);}return true;});}renderCatalog();});
