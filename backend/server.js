@@ -144,7 +144,7 @@ async function persistBattle(room) {
     if (error) throw error;
     room.databaseId = battle.id;
     const players = room.players.filter(Boolean).map((p, index) => ({
-      battle_id: battle.id, user_id: p.userId || null, side: index + 1,
+      battle_id: battle.id, user_id: room.mode === 'online' ? (p.userId || null) : null, side: index + 1,
       display_name: p.name, team_id: p.teamId || null
     }));
     if (players.length) await supabaseAdmin.from('battle_players').insert(players);
@@ -200,7 +200,7 @@ io.on('connection', socket => {
       if (!room || room.finished) throw new Error('Sala não encontrada ou já encerrada.');
       if (room.mode === 'online' && !socket.data.user) throw new Error('Entre na sua conta para participar de uma batalha online.');
       if (room.players[1]) throw new Error('Esta sala já está completa.');
-      if (room.players[0].userId && room.players[0].userId === socket.data.user?.id) throw new Error('Você não pode entrar na própria sala com a mesma conta.');
+      if (room.mode === 'online' && room.players[0].userId && room.players[0].userId === socket.data.user?.id) throw new Error('Você não pode entrar na própria sala com a mesma conta.');
       const team = normalizeTeam(payload.team);
       room.players[1] = {
         socketId: socket.id, userId: socket.data.user?.id || null,
@@ -211,7 +211,7 @@ io.on('connection', socket => {
       socket.data.battleCode = code;
       if (supabaseAdmin && room.databaseId) {
         await supabaseAdmin.from('battle_players').insert({
-          battle_id: room.databaseId, user_id: room.players[1].userId || null,
+          battle_id: room.databaseId, user_id: room.mode === 'online' ? (room.players[1].userId || null) : null,
           side: 2, display_name: room.players[1].name, team_id: room.players[1].teamId || null
         });
       }
