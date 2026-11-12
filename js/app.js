@@ -329,9 +329,9 @@
     $('#sort-filter').addEventListener('change',()=>renderCatalog());
     $('#type-filter').addEventListener('change',()=>renderCatalog());
     $('#reset-filters').addEventListener('click',()=>{$('#search-input').value='';$('#generation-filter').value='all';$('#type-filter').value='all';$('#sort-filter').value='id-asc';quickFilter='all';$$('[data-quick]').forEach(c=>c.classList.toggle('active',c.dataset.quick==='all'));renderCatalog();});
-    $('[data-quick]').forEach(chip=>chip.addEventListener('click',()=>{
+    $$('[data-quick]').forEach(chip=>chip.addEventListener('click',()=>{
       quickFilter=chip.dataset.quick;
-      $('[data-quick]').forEach(c=>c.classList.toggle('active',c===chip));
+      $$('[data-quick]').forEach(c=>c.classList.toggle('active',c===chip));
       renderCatalog();
     }));
     $('#load-more').addEventListener('click',()=>{visibleCount+=24;renderCatalog(false);});
