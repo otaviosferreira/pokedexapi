@@ -40,16 +40,16 @@
   }
   async function loadSlotDetails(index,id) {
     const row=$('battle-team-slots').querySelector('[data-slot="'+index+'"]');
-    if(!id){teamCache[index]={species:'',speciesId:0,ability:'',moves:[],item:'',level:100,nature:'Serious'};row.querySelector('.slot-ability').innerHTML='<option value="">Habilidade automática</option>';return;}
+    if(!id){teamCache[index]={species:'',speciesId:0,ability:'',moves:[],item:'',level:100,nature:'Serious',nature:'Serious'};row.querySelector('.slot-ability').innerHTML='<option value="">Habilidade automática</option>';return;}
     try {
       const data=await PokeAPI.pokemon(id);
       const abilities=data.abilities.filter(a=>!a.is_hidden).map(a=>a.ability.name);
       const abilitySelect=row.querySelector('.slot-ability');
       abilitySelect.innerHTML='<option value="">Automática</option>'+abilities.map(a=>'<option value="'+esc(a)+'">'+esc(a.replaceAll('-',' '))+'</option>').join('');
       const oldMoves=teamCache[index].moves || [];
-      const moves=data.moves.map(m=>m.move.name);
+      const moves=data.moves.filter(m=>m.version_group_details?.some(v=>v.version_group?.name==='scarlet-violet' && ['level-up','machine','tutor','egg'].includes(v.move_learn_method?.name))).map(m=>m.move.name);
       const selected=oldMoves.length?oldMoves.slice(0,4):(moves.length?moves.slice(0,4):data.moves.slice(0,4).map(m=>m.move.name));
-      teamCache[index]={...teamCache[index],species:data.name,speciesId:id,ability:abilities[0] || '',moves:selected,item:'',level:100};
+      teamCache[index]={...teamCache[index],species:data.name,speciesId:id,ability:abilities[0] || '',moves:selected,item:teamCache[index].item || '',level:100,nature:teamCache[index].nature || 'Serious'};
       row.querySelectorAll('.slot-move').forEach((input,n)=>input.value=selected[n] || '');
       abilitySelect.value=teamCache[index].ability;
       log('Carregado '+data.name+': '+abilities.length+' habilidades e '+moves.length+' golpes disponíveis na PokéAPI.');
@@ -128,7 +128,7 @@
       const team=collectTeam();
       const {data:created,error}=await sb.from('teams').insert({owner_id:currentUser.id,name:$('battle-team-name').value.trim() || 'Minha equipe',format:'gen9_singles_6v6'}).select().single();
       if(error)throw error;
-      const rows=team.map((p,i)=>({team_id:created.id,slot:i+1,pokemon_id:p.speciesId,species:p.species,level:p.level,ability:p.ability || 'No Ability',moves:p.moves,item:p.item || null,nature:p.nature || 'Serious'}));
+      const rows=team.map((p,i)=>({team_id:created.id,slot:i+1,pokemon_id:p.speciesId,species:p.species,level:p.level,ability:p.ability || 'No Ability',moves:p.moves,item:p.item || null,nature:p.nature || 'Serious',nature:p.nature || 'Serious'}));
       const saved=await sb.from('team_pokemon').insert(rows);
       if(saved.error)throw saved.error;
       log('Equipe salva na nuvem: '+created.name+'.');
