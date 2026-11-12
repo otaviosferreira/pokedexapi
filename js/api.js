@@ -103,15 +103,21 @@ const PokeAPI = (() => {
   async function refreshCatalog(current, onUpdate) {
     const byId = new Map(current.map(item=>[item.id,item]));
     const offsets = [151,401,651,901];
-    const pages = await Promise.all(offsets.map(offset=>{
+    const pages = await Promise.allSettled(offsets.map(offset=>{
       const limit = Math.min(250, CATALOG_TOTAL-offset);
       return request(BASE + '/pokemon?limit='+limit+'&offset='+offset);
     }));
-    pages.forEach(page=>normalizeCatalog(page.results).forEach(item=>byId.set(item.id,item)));
-    const complete = [...byId.values()].sort((a,b)=>a.id-b.id);
-    writeCatalogCache(complete);
-    if (typeof onUpdate === 'function') onUpdate(complete);
-    return complete;
+    pages.forEach(result=>{
+      if(result.status==='fulfilled') {
+        normalizeCatalog(result.value.results).forEach(item=>byId.set(item.id,item));
+      }
+    });
+    const updated = [...byId.values()].sort((a,b)=>a.id-b.id);
+    if(updated.length>current.length) {
+      writeCatalogCache(updated);
+      if (typeof onUpdate === 'function') onUpdate(updated);
+    }
+    return updated;
   }
   async function pokemon(idOrName) {
     return request(BASE + '/pokemon/' + encodeURIComponent(String(idOrName).toLowerCase()));
