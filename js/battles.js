@@ -30,7 +30,7 @@
   function renderSlots() {
     $('battle-team-slots').innerHTML = teamCache.map((p,i) => {
       const moveListId = 'battle-moves-' + i;
-      return '<div class="battle-slot" data-slot="'+i+'"><strong>'+(i+1)+'.</strong><div class="slot-species-wrap"><input class="slot-species" list="battle-pokemon-options" placeholder="Digite o nome do Pokémon" value="'+esc(p.species || '')+'" autocomplete="off" aria-label="Pokémon '+(i+1)+'"><datalist id="battle-pokemon-options">'+catalog.map(item=>'<option value="'+esc(item.name)+'">#'+item.id+'</option>').join('')+'</datalist></div><select class="slot-ability" aria-label="Habilidade '+(i+1)+'" disabled><option value="">Escolha um Pokémon primeiro</option></select><div class="slot-moves">'+[0,1,2,3].map(n=>'<input class="slot-move" data-move="'+n+'" list="'+moveListId+'" placeholder="Digite ou escolha golpe '+(n+1)+'" value="'+esc(p.moves?.[n] || '')+'" disabled>').join('')+'</div><datalist id="'+moveListId+'"></datalist></div>';
+      return '<div class="battle-slot" data-slot="'+i+'"><strong>'+(i+1)+'.</strong><div class="slot-species-wrap"><input class="slot-species" list="battle-pokemon-options" placeholder="Digite o nome do Pokémon" value="'+esc(p.species || '')+'" autocomplete="off" aria-label="Pokémon '+(i+1)+'"><datalist id="battle-pokemon-options">'+catalog.map(item=>'<option value="'+esc(item.name)+'">#'+item.id+'</option>').join('')+'</datalist></div><div class="slot-ability-wrap"><select class="slot-ability" aria-label="Habilidade '+(i+1)+'" disabled><option value="">Escolha um Pokémon primeiro</option></select><div class="slot-types" aria-live="polite"></div></div><div class="slot-moves">'+[0,1,2,3].map(n=>'<input class="slot-move" data-move="'+n+'" list="'+moveListId+'" placeholder="Digite ou escolha golpe '+(n+1)+'" value="'+esc(p.moves?.[n] || '')+'" disabled>').join('')+'</div><datalist id="'+moveListId+'"></datalist></div>';
     }).join('');
     [...$('battle-team-slots').querySelectorAll('.battle-slot')].forEach((row,i)=>{
       const species=row.querySelector('.slot-species');
@@ -56,6 +56,9 @@
     try {
       const data=await PokeAPI.pokemon(id);
       const abilities=(data.abilities||[]).map(a=>({name:a.ability.name,hidden:a.is_hidden}));
+      const typeNames=(data.types||[]).sort((a,b)=>a.slot-b.slot).map(t=>t.type.name);
+      row.querySelector('.slot-types').innerHTML=typeNames.map(type=>'<span class="battle-type type-'+esc(type)+'"><img src="https://raw.githubusercontent.com/duiker101/pokemon-type-svg-icons/master/icons/'+esc(type)+'.svg" alt="">'+esc(type)+'</span>').join('');
+
       const abilitySelect=row.querySelector('.slot-ability');
       abilitySelect.innerHTML='<option value="">Selecione uma habilidade</option>'+abilities.map(a=>'<option value="'+esc(a.name)+'">'+esc(a.name.replaceAll('-',' '))+(a.hidden?' (oculta)':'')+'</option>').join('');
       abilitySelect.disabled=!abilities.length;
@@ -102,9 +105,47 @@
     socket.on('connect_error',error=>log('Conexão: '+error.message));
     socket.on('battle:waiting',data=>{setStatus(data.message);log(data.message);});
     socket.on('battle:started',data=>{setStatus('Batalha iniciada: '+data.players.join(' × '),true);$('battle-turn-controls').hidden=false;log('Batalha iniciada · '+data.format);renderTurnButtons();});
-    socket.on('battle:log',data=>String(data.text).split('\n').filter(Boolean).forEach(line=>log(line)));
+    socket.on('battle:log',data=>{parseBattleText(data.text);String(data.text).split('\n').filter(Boolean).forEach(line=>log(line));});
     socket.on('battle:player-disconnected',data=>log(data.message));
     socket.on('battle:finished',data=>{setStatus('Partida encerrada.');log('Fim da batalha. '+data.text);});
+  }
+  function ensureBattleArena() {
+    const logNode=$('battle-log');
+    if($('battle-arena')) return;
+    const arena=document.createElement('div');
+    arena.id='battle-arena';
+    arena.className='retro-arena';
+    arena.innerHTML='<div class="retro-field"><div class="retro-opponent"><div class="retro-status"><strong id="arena-opponent-name">OPONENTE</strong><span id="arena-opponent-level">Lv. 50</span><div class="retro-hp"><i id="arena-opponent-hp"></i></div></div><img id="arena-opponent-sprite" alt="Pokémon adversário"></div><div class="retro-player"><img id="arena-player-sprite" alt="Seu Pokémon"><div class="retro-status"><strong id="arena-player-name">SEU POKÉMON</strong><span id="arena-player-level">Lv. 50</span><div class="retro-hp"><i id="arena-player-hp"></i></div></div></div></div><div class="retro-dialog"><p id="arena-message">O que seu Pokémon fará?</p><div class="retro-menu" id="arena-menu"><button data-arena="fight">▶ LUTAR</button><button data-arena="bag">MOCHILA</button><button data-arena="pokemon">POKÉMON</button><button data-arena="run">FUGIR</button></div></div>';
+    logNode.parentNode.insertBefore(arena,logNode);
+    arena.querySelectorAll('[data-arena]').forEach(button=>button.addEventListener('click',()=>{
+      const action=button.dataset.arena;
+      $('arena-message').textContent=action==='fight'?'Escolha um golpe abaixo.':action==='pokemon'?'Use os botões Trocar abaixo para escolher sua equipe.':action==='bag'?'A mochila ainda não está disponível nesta versão.':'Não é possível fugir de uma batalha online.';
+      if(action==='fight') $('battle-turn-controls').hidden=false;
+    }));
+  }
+  function setArenaPokemon(side,name) {
+    const match=catalog.find(p=>p.name===String(name).toLowerCase()) || catalog.find(p=>p.name===String(name).toLowerCase().replace(/[^a-z0-9-]/g,''));
+    if(!match)return;
+    const prefix=side==='p1'?'player':'opponent';
+    $('arena-'+prefix+'-name').textContent=match.name.toUpperCase();
+    $('arena-'+prefix+'-sprite').src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/'+match.id+'.png';
+    $('arena-message').textContent=(side==='p1'?'Você enviou ':'O adversário enviou ')+match.name+'!';
+  }
+  function parseBattleText(text) {
+    for(const line of String(text).split('\n')) {
+      const parts=line.split('|');
+      if(parts[1]==='switch'||parts[1]==='drag') {
+        const side=parts[2]?.startsWith('p1')?'p1':parts[2]?.startsWith('p2')?'p2':null;
+        const name=parts[3]?.split(',')[0]?.trim().toLowerCase();
+        if(side&&name)setArenaPokemon(side,name);
+      } else if(parts[1]==='move') {
+        $('arena-message').textContent=(parts[2]||'').startsWith('p1')?'Seu Pokémon usou '+(parts[3]||'um golpe')+'!':'O adversário usou '+(parts[3]||'um golpe')+'!';
+      } else if(parts[1]==='-damage'||parts[1]==='-heal') {
+        const side=parts[2]?.startsWith('p1')?'player':parts[2]?.startsWith('p2')?'opponent':null;
+        if(side) {const hp=parts[3]||'';const pct=Number((hp.match(/(\d+(?:\.\d+)?)%/)||[])[1]||100);$('arena-'+side+'-hp').style.width=Math.max(0,Math.min(100,pct))+'%';}
+      } else if(parts[1]==='win') $('arena-message').textContent=parts[2]+' venceu a batalha!';
+      else if(parts[1]==='faint') $('arena-message').textContent=(parts[2]||'Pokémon')+' foi derrotado!';
+    }
   }
   function renderTurnButtons() {
     $('battle-move-buttons').innerHTML=[1,2,3,4].map(n=>'<button data-choice="move '+n+'">Ataque '+n+'</button>').join('');
@@ -184,6 +225,7 @@
       catalog=await response.json();
       teamCache=defaultTeam();
       renderSlots();
+      ensureBattleArena();
       $('battle-signin').addEventListener('click',()=>authAction('signin'));
       $('battle-signup').addEventListener('click',()=>authAction('signup'));
       $('battle-signout').addEventListener('click',async()=>{await sb.auth.signOut();currentUser=null;updateAuthUI();socket?.disconnect();});
