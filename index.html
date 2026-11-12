@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101827">
+  <meta name="description" content="Uma Pokédex completa, interativa e atualizada com dados da PokéAPI.">
+  <title>Pokédex — Explore o mundo Pokémon</title>
+  <link rel="preconnect" href="https://pokeapi.co">
+  <link rel="preconnect" href="https://raw.githubusercontent.com">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/api.js" defer></script>
+  <script src="js/app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#" aria-label="Pokédex início"><span class="brand-ball">◉</span><span>Poké<span>dex</span></span></a>
+      <p class="nav-caption">MENU PRINCIPAL</p>
+      <nav class="main-nav" aria-label="Navegação principal">
+        <button class="nav-link active" data-view="explore"><span>▦</span> Explorar</button>
+        <button class="nav-link" data-view="favorites"><span>♡</span> Favoritos <b id="favorite-count">0</b></button>
+        <button class="nav-link" data-view="collection"><span>✓</span> Minha coleção</button>
+        <button class="nav-link" data-view="compare"><span>⇄</span> Comparador</button>
+        <button class="nav-link" data-view="statistics"><span>▥</span> Estatísticas</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="mini-progress"><div class="mini-progress-top"><span>Sua Pokédex</span><strong id="side-progress">0%</strong></div><div class="progress-track"><i id="side-progress-bar"></i></div><small id="side-caught">0 de 1025 capturados</small></div>
+        <button class="theme-toggle" id="theme-toggle"><span id="theme-icon">☾</span> Alternar tema</button>
+        <p class="api-note">Dados fornecidos por <a href="https://pokeapi.co/" target="_blank" rel="noreferrer">PokéAPI</a></p>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <button class="mobile-menu" id="mobile-menu" aria-label="Abrir menu">☰</button>
+        <div class="breadcrumb">Pokédex <span>/</span> <strong id="breadcrumb-current">Explorar</strong></div>
+        <div class="top-actions"><span class="status-dot"></span><span class="status-text">PokéAPI conectada</span><button class="avatar" title="Treinador">T</button></div>
+      </header>
+
+      <section class="view active" id="view-explore">
+        <div class="hero">
+          <div><span class="eyebrow">ENCICLOPÉDIA POKÉMON</span><h1>Encontre seu próximo<br><em>Pokémon favorito.</em></h1><p>Explore espécies, descubra habilidades e complete sua coleção.</p></div>
+          <div class="hero-art"><div class="hero-orbit orbit-one"></div><div class="hero-orbit orbit-two"></div><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png" alt="Pikachu"></div>
+          <div class="hero-stats"><div><strong id="hero-total">1.025</strong><span>Pokémon</span></div><div><strong>09</strong><span>Gerações</span></div><div><strong id="hero-caught">0</strong><span>Capturados</span></div></div>
+        </div>
+        <div class="section-heading"><div><span class="eyebrow">CATÁLOGO</span><h2>Todos os Pokémon</h2><p id="results-label">Carregando Pokédex...</p></div><button class="outline-button" id="reset-filters">Limpar filtros ↺</button></div>
+        <div class="toolbar">
+          <label class="search-box"><span>⌕</span><input id="search-input" type="search" placeholder="Buscar por nome ou número..." autocomplete="off"><kbd>⌘ K</kbd></label>
+          <select id="generation-filter" aria-label="Filtrar geração"><option value="all">Todas as gerações</option><option value="1">Geração I · Kanto</option><option value="2">Geração II · Johto</option><option value="3">Geração III · Hoenn</option><option value="4">Geração IV · Sinnoh</option><option value="5">Geração V · Unova</option><option value="6">Geração VI · Kalos</option><option value="7">Geração VII · Alola</option><option value="8">Geração VIII · Galar</option><option value="9">Geração IX · Paldea</option></select>
+          <select id="type-filter" aria-label="Filtrar tipo"><option value="all">Todos os tipos</option></select>
+          <select id="sort-filter" aria-label="Ordenar Pokémon"><option value="id-asc">Nº crescente</option><option value="id-desc">Nº decrescente</option><option value="name-asc">Nome A–Z</option><option value="name-desc">Nome Z–A</option><option value="height">Maior altura</option><option value="weight">Maior peso</option></select>
+        </div>
+        <div class="quick-filters"><button class="chip active" data-quick="all">Todos</button><button class="chip" data-quick="favorites">♡ Favoritos</button><button class="chip" data-quick="caught">✓ Capturados</button><button class="chip" data-quick="legendary">Lendários</button><button class="chip" data-quick="mythical">Míticos</button></div>
+        <div class="type-legend" id="type-legend"></div>
+        <div class="pokemon-grid" id="pokemon-grid"><div class="loading-state"><div class="pokeball-loader"></div><p>Preparando sua Pokédex...</p></div></div>
+        <div class="load-more-wrap"><button class="primary-button" id="load-more" hidden>Carregar mais Pokémon</button></div>
+      </section>
+
+      <section class="view" id="view-favorites"><div class="page-heading"><span class="eyebrow">SUA LISTA PESSOAL</span><h1>Pokémon favoritos</h1><p>Todos os Pokémon que você marcou com carinho.</p></div><div class="pokemon-grid" id="favorites-grid"></div></section>
+      <section class="view" id="view-collection"><div class="page-heading"><span class="eyebrow">JORNADA DO TREINADOR</span><h1>Minha coleção</h1><p>Acompanhe sua evolução e complete as nove gerações.</p></div><div class="collection-overview"><div class="collection-number"><strong id="collection-number">0</strong><span>/ 1.025 capturados</span></div><div class="collection-progress"><div class="progress-track large"><i id="collection-bar"></i></div><p id="collection-percent">0% da Pokédex completa</p></div></div><div class="generation-progress" id="generation-progress"></div><div class="section-heading compact"><div><h2>Pokémon capturados</h2><p>Sua coleção registrada neste dispositivo.</p></div></div><div class="pokemon-grid" id="collection-grid"></div></section>
+      <section class="view" id="view-compare"><div class="page-heading"><span class="eyebrow">ANÁLISE DE ATRIBUTOS</span><h1>Comparador Pokémon</h1><p>Escolha dois Pokémon e descubra como seus atributos se comparam.</p></div><div class="compare-selectors"><label>Primeiro Pokémon<input id="compare-one" list="pokemon-options" placeholder="Ex.: pikachu ou 25"></label><label>Segundo Pokémon<input id="compare-two" list="pokemon-options" placeholder="Ex.: charizard ou 6"></label><datalist id="pokemon-options"></datalist><button class="primary-button" id="compare-button">Comparar Pokémon</button></div><div id="compare-result" class="compare-result empty-state">Selecione dois Pokémon para iniciar a comparação.</div></section>
+      <section class="view" id="view-statistics"><div class="page-heading"><span class="eyebrow">DADOS DA POKÉDEX</span><h1>Estatísticas gerais</h1><p>Uma visão geral das espécies e do seu progresso.</p></div><div class="stat-cards"><article><span>Espécies catalogadas</span><strong>1.025</strong><small>Da primeira à nona geração</small></article><article><span>Seus favoritos</span><strong id="stat-favorites">0</strong><small>Pokémon salvos</small></article><article><span>Capturados</span><strong id="stat-caught">0</strong><small id="stat-remaining">1.025 restantes</small></article><article><span>Progresso</span><strong id="stat-percent">0%</strong><small>Da coleção completa</small></article></div><div class="stats-layout"><article class="panel"><h3>Pokémon por geração</h3><div id="generation-chart" class="bar-chart"></div></article><article class="panel"><h3>Distribuição por tipo</h3><div id="type-chart" class="type-chart"></div></article></div></section>
+      <footer class="footer">Feito para treinadores Pokémon · Dados da <a href="https://pokeapi.co/" target="_blank" rel="noreferrer">PokéAPI</a></footer>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="pokemon-modal" aria-hidden="true"><section class="pokemon-modal" role="dialog" aria-modal="true" aria-labelledby="modal-name"><button class="modal-close" id="modal-close" aria-label="Fechar">×</button><div id="modal-content"></div></section></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
