@@ -209,6 +209,12 @@ io.on('connection', socket => {
       };
       socket.join('battle:' + code);
       socket.data.battleCode = code;
+      if (supabaseAdmin && room.databaseId) {
+        await supabaseAdmin.from('battle_players').insert({
+          battle_id: room.databaseId, user_id: room.players[1].userId || null,
+          side: 2, display_name: room.players[1].name, team_id: room.players[1].teamId || null
+        });
+      }
       await startBattle(room);
       ack({ ok: true, code, side: 2, mode: room.mode });
     } catch (error) { ack({ ok: false, error: error.message }); }
@@ -264,6 +270,9 @@ async function startBattle(room) {
   stream.write('>start ' + JSON.stringify({ formatid: room.format }));
   stream.write('>player p1 ' + JSON.stringify({ name: room.players[0].name, team: room.players[0].packed }));
   stream.write('>player p2 ' + JSON.stringify({ name: room.players[1].name, team: room.players[1].packed }));
+  if (supabaseAdmin && room.databaseId) {
+    await supabaseAdmin.from('battles').update({ status: 'active', started_at: new Date().toISOString() }).eq('id', room.databaseId);
+  }
   await persistEvent(room, 0, 'battle_started', { format: room.format });
   emitRoom(room, 'battle:started', { code: room.code, format: room.format, players: room.players.map(p => p.name) });
   outputTask.catch(error => console.error('Battle stream error:', error));
