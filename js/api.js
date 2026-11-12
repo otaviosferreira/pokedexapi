@@ -2,6 +2,11 @@
 const PokeAPI = (() => {
   const BASE = 'https://pokedexapi-api.onrender.com/api/v2';
   const DIRECT_BASE = 'https://pokeapi.co/api/v2';
+  const RENDER_HEALTH = BASE.replace('/api/v2', '/health');
+  function warmup() {
+    // Acorda o serviço gratuito do Render sem bloquear a interface.
+    fetch(RENDER_HEALTH, { mode: 'cors', cache: 'no-store' }).catch(() => {});
+  }
   const cache = new Map();
   const pending = new Map();
   async function request(url) {
@@ -135,5 +140,5 @@ const PokeAPI = (() => {
     const entry = entries.find(item => item.version?.name === 'sword') || entries[0];
     return entry ? entry.flavor_text.replace(/[\n\f]/g,' ').replace(/\s+/g,' ') : 'Descrição não disponível.';
   }
-  return {request,catalog,pokemon,species,evolution,type,typeList,detailsBatch,imageCandidates,artwork,sprite,generation,englishFlavor,mapLimit};
+  return {request,catalog,pokemon,species,evolution,type,typeList,detailsBatch,imageCandidates,artwork,sprite,generation,englishFlavor,mapLimit,warmup};
 })();
