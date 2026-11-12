@@ -332,7 +332,15 @@
       $('#results-label').textContent=catalog.length.toLocaleString('pt-BR')+' Pokémon disponíveis';
       $('#pokemon-options').innerHTML=catalog.map(p=>'<option value="'+p.name+'">#'+pad(p.id)+'</option>').join('');
       renderCatalog();
+      if(currentView==='favorites') renderSaved('favorites');
+      if(currentView==='collection') { renderCollection(); renderSaved('collection'); }
+      const status=$('.status-text');
+      if(status) status.textContent='PokéAPI conectada';
+      $('.status-dot')?.classList.remove('offline');
     } catch(error) {
+      const status=$('.status-text');
+      if(status) status.textContent='PokéAPI indisponível';
+      $('.status-dot')?.classList.add('offline');
       retry.innerHTML='<div class="empty-state"><strong>Não foi possível carregar a Pokédex.</strong><br><br>'+error.message+'<br><br><button class="primary-button" id="retry-catalog">Tentar novamente</button></div>';
       $('#results-label').textContent='Falha ao carregar o catálogo';
     }
