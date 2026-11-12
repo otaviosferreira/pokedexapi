@@ -6,7 +6,7 @@
   const SUPABASE_KEY = 'sb_publishable_fYv07uf1N1HAPLXU1ByG1g_mHGOcU-f';
   const API_URL = 'https://pokedexapi-api.onrender.com';
   const TEAM_KEY = 'pokedex-battle-team-v1';
-  let sb = null, socket = null, currentUser = null, teamCache = [], catalog = [], currentRoom = null;
+  let sb = null, socket = null, currentUser = null, teamCache = [], catalog = [], currentRoom = null, slotDetails = new Map();
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   function log(message) {
     const node = $('battle-log');
@@ -28,42 +28,63 @@
     return Array.from({length:6}, () => ({species:'', speciesId:0, ability:'', moves:[], item:'', level:100}));
   }
   function renderSlots() {
-    const options = '<option value="">Selecione um Pokémon</option>' + catalog.map(p => '<option value="'+p.id+'">#'+String(p.id).padStart(3,'0')+' '+esc(p.name)+'</option>').join('');
-    $('battle-team-slots').innerHTML = teamCache.map((p,i) => '<div class="battle-slot" data-slot="'+i+'"><strong>'+(i+1)+'.</strong><select class="slot-species" aria-label="Pokémon '+(i+1)+'">'+options+'</select><select class="slot-ability" aria-label="Habilidade '+(i+1)+'"><option value="">Habilidade automática</option></select><div class="slot-moves">'+[0,1,2,3].map(n=>'<input class="slot-move" data-move="'+n+'" placeholder="Golpe '+(n+1)+'" value="'+esc(p.moves?.[n] || '')+'">').join('')+'</div></div>').join('');
+    $('battle-team-slots').innerHTML = teamCache.map((p,i) => {
+      const moveListId = 'battle-moves-' + i;
+      return '<div class="battle-slot" data-slot="'+i+'"><strong>'+(i+1)+'.</strong><div class="slot-species-wrap"><input class="slot-species" list="battle-pokemon-options" placeholder="Digite o nome do Pokémon" value="'+esc(p.species || '')+'" autocomplete="off" aria-label="Pokémon '+(i+1)+'"><datalist id="battle-pokemon-options">'+catalog.map(item=>'<option value="'+esc(item.name)+'">#'+item.id+'</option>').join('')+'</datalist></div><select class="slot-ability" aria-label="Habilidade '+(i+1)+'" disabled><option value="">Escolha um Pokémon primeiro</option></select><div class="slot-moves">'+[0,1,2,3].map(n=>'<input class="slot-move" data-move="'+n+'" list="'+moveListId+'" placeholder="Digite ou escolha golpe '+(n+1)+'" value="'+esc(p.moves?.[n] || '')+'" disabled>').join('')+'</div><datalist id="'+moveListId+'"></datalist></div>';
+    }).join('');
     [...$('battle-team-slots').querySelectorAll('.battle-slot')].forEach((row,i)=>{
       const species=row.querySelector('.slot-species');
-      species.value=teamCache[i].speciesId || '';
       row.querySelectorAll('.slot-move').forEach(input=>input.addEventListener('change',()=>{teamCache[i].moves[row.querySelectorAll('.slot-move').length?Number(input.dataset.move):0]=input.value.trim().toLowerCase().replaceAll(' ','-');}));
-      species.addEventListener('change',()=>loadSlotDetails(i,Number(species.value)));
+      species.addEventListener('change',()=>resolveSpecies(i,species.value));
+      species.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();resolveSpecies(i,species.value);}});
       row.querySelector('.slot-ability').addEventListener('change',event=>teamCache[i].ability=event.target.value);
     });
+    teamCache.forEach((p,i)=>{if(p.species)resolveSpecies(i,p.species);});
+  }
+  async function resolveSpecies(index,value) {
+    const query=String(value||'').trim().toLowerCase();
+    const match=catalog.find(p=>p.name.toLowerCase()===query || String(p.id)===query.replace(/^#/,'')) ||
+      catalog.find(p=>p.name.toLowerCase().startsWith(query));
+    if(!match){log('Não encontrei esse Pokémon. Digite um nome válido da Pokédex.');return;}
+    const input=$('battle-team-slots').querySelector('[data-slot="'+index+'"] .slot-species');
+    input.value=match.name;
+    await loadSlotDetails(index,match.id);
   }
   async function loadSlotDetails(index,id) {
     const row=$('battle-team-slots').querySelector('[data-slot="'+index+'"]');
-    if(!id){teamCache[index]={species:'',speciesId:0,ability:'',moves:[],item:'',level:100,nature:'Serious',nature:'Serious'};row.querySelector('.slot-ability').innerHTML='<option value="">Habilidade automática</option>';return;}
+    if(!id){teamCache[index]={species:'',speciesId:0,ability:'',moves:[],item:'',level:100,nature:'Serious'};return;}
     try {
       const data=await PokeAPI.pokemon(id);
-      const abilities=data.abilities.filter(a=>!a.is_hidden).map(a=>a.ability.name);
+      const abilities=(data.abilities||[]).map(a=>({name:a.ability.name,hidden:a.is_hidden}));
       const abilitySelect=row.querySelector('.slot-ability');
-      abilitySelect.innerHTML='<option value="">Automática</option>'+abilities.map(a=>'<option value="'+esc(a)+'">'+esc(a.replaceAll('-',' '))+'</option>').join('');
-      const oldMoves=teamCache[index].moves || [];
-      const moves=data.moves.filter(m=>m.version_group_details?.some(v=>v.version_group?.name==='scarlet-violet' && ['level-up','machine','tutor','egg'].includes(v.move_learn_method?.name))).map(m=>m.move.name);
-      const selected=oldMoves.length?oldMoves.slice(0,4):(moves.length?moves.slice(0,4):data.moves.slice(0,4).map(m=>m.move.name));
-      teamCache[index]={...teamCache[index],species:data.name,speciesId:id,ability:abilities[0] || '',moves:selected,item:teamCache[index].item || '',level:100,nature:teamCache[index].nature || 'Serious'};
-      row.querySelectorAll('.slot-move').forEach((input,n)=>input.value=selected[n] || '');
+      abilitySelect.innerHTML='<option value="">Selecione uma habilidade</option>'+abilities.map(a=>'<option value="'+esc(a.name)+'">'+esc(a.name.replaceAll('-',' '))+(a.hidden?' (oculta)':'')+'</option>').join('');
+      abilitySelect.disabled=!abilities.length;
+      const learnable=(data.moves||[]).filter(m=>(m.version_group_details||[]).some(v=>['scarlet-violet','sword-shield','brilliant-diamond-shining-pearl','legends-arceus'].includes(v.version_group?.name))).map(m=>m.move.name);
+      const moveOptions=learnable.length?learnable:(data.moves||[]).map(m=>m.move.name);
+      const list=row.querySelector('datalist[id^="battle-moves-"]');
+      list.innerHTML=moveOptions.map(name=>'<option value="'+esc(name)+'">').join('');
+      const old=teamCache[index]?.moves||[];
+      const selected=old.filter(name=>moveOptions.includes(name)).slice(0,4);
+      teamCache[index]={...teamCache[index],species:data.name,speciesId:id,ability:abilities.find(x=>!x.hidden)?.name||abilities[0]?.name||'',moves:selected,item:teamCache[index]?.item||'',level:100,nature:teamCache[index]?.nature||'Serious'};
+      row.querySelectorAll('.slot-move').forEach((input,n)=>{input.disabled=false;input.value=selected[n]||'';});
       abilitySelect.value=teamCache[index].ability;
-      log('Carregado '+data.name+': '+abilities.length+' habilidades e '+moves.length+' golpes disponíveis na PokéAPI.');
+      slotDetails.set(index,{moves:new Set(moveOptions),abilities:new Set(abilities.map(a=>a.name))});
+      log('Carregado '+data.name+': '+abilities.length+' habilidades (incluindo oculta) e '+moveOptions.length+' golpes sugeridos.');
     } catch(error) { log('Falha ao carregar detalhes do Pokémon: '+error.message); }
   }
   function collectTeam() {
     const team=[];
     [...$('battle-team-slots').querySelectorAll('.battle-slot')].forEach((row,i)=>{
-      const id=Number(row.querySelector('.slot-species').value);
+      const id=Number(catalog.find(p=>p.name===row.querySelector('.slot-species').value.trim().toLowerCase())?.id||0);
       const species=catalog.find(p=>p.id===id);
       const moves=[...row.querySelectorAll('.slot-move')].map(input=>input.value.trim().toLowerCase().replaceAll(' ','-')).filter(Boolean);
-      if(!species) throw new Error('Escolha um Pokémon para o espaço '+(i+1)+'.');
+      if(!species) throw new Error('Escolha um Pokémon válido no espaço '+(i+1)+'.');
       if(!moves.length) throw new Error('Informe pelo menos um golpe para '+species.name+'.');
-      team.push({species:species.name,speciesId:id,ability:row.querySelector('.slot-ability').value || '',moves,item:teamCache[index].item || '',level:100,nature:teamCache[index].nature || 'Serious'});
+      const details=slotDetails.get(i);
+      if(details && moves.some(move=>!details.moves.has(move))) throw new Error('Um dos golpes de '+species.name+' não está na lista de golpes que ele pode aprender.');
+      const ability=row.querySelector('.slot-ability').value;
+      if(ability && details && !details.abilities.has(ability)) throw new Error('Habilidade inválida para '+species.name+'.');
+      team.push({species:species.name,speciesId:id,ability,moves,item:teamCache[i]?.item||'',level:100,nature:teamCache[i]?.nature||'Serious'});
     });
     if(team.length!==6) throw new Error('A equipe precisa ter seis Pokémon.');
     teamCache=team;
